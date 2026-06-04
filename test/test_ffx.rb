@@ -188,6 +188,44 @@ class TestFFX < Minitest::Test
     end
   end
 
+  def test_zjit_ffi_call
+    # Run with RUBY_ZJIT_ENABLE=1
+    skip "ZJIT not enabled" unless (defined?(RubyVM::ZJIT) && RubyVM::ZJIT.enabled?)
+
+    Dir.mktmpdir do |tmpdir|
+      FileUtils.cp(File.join(ROOT, "ffx.rb"), tmpdir)
+      FileUtils.cp(File.join(ROOT, "ffi.rb"), tmpdir)
+
+      File.write(File.join(tmpdir, "mylib.rb"), <<~RUBY)
+        require "ffi"
+
+        module MyLib
+          extend FFI::Library
+          ffi_lib "c"
+
+          attach_function :strlen, [:string], :size_t
+        end
+      RUBY
+
+      File.write(File.join(tmpdir, "extconf.rb"), <<~RUBY)
+        require_relative "ffx"
+        FFX.create_makefile("mylib", File.expand_path("mylib.rb", __dir__))
+      RUBY
+
+      build_extension(tmpdir)
+
+      ext_path = File.join(tmpdir, "mylib.#{DLEXT}")
+      out = run_ruby(tmpdir, <<~RUBY)
+        raise "ZJIT not enabled" unless (defined?(RubyVM::ZJIT) && RubyVM::ZJIT.enabled?)
+
+        require "#{ext_path}"
+        100.times { puts MyLib.strlen("hello") }
+      RUBY
+
+      assert_equal ["5"] * 100, out.lines.map(&:strip)
+    end
+  end
+
   private
 
   def build_extension(dir)

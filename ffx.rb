@@ -188,12 +188,16 @@ module FFX
       name = f[:name]
       params = f[:params]
       ret = f[:ret]
+      ptr_var = "rb_#{prefix}_#{name}_fptr"
 
       pbytes = params.map { |t|
         "  \".byte #{TYPES.fetch(t)[:byte]}\\n\"\n"
       }.join
 
       <<~C
+        __attribute__((used))
+        static void *#{ptr_var} __asm__("_#{ptr_var}") = (void *)#{name};
+
         __attribute__((naked, aligned(16)))
         static VALUE
         rb_#{prefix}_#{name}(#{vparams(f)})
@@ -203,7 +207,7 @@ module FFX
           ".long 0x46464930\\n"
           ".byte #{params.size}\\n"
         #{pbytes}  ".byte #{TYPES.fetch(ret)[:byte]}\\n"
-          ".asciz \\"#{name}\\"\\n"
+          ".long _#{ptr_var} - .\\n"
         );
         }
 
