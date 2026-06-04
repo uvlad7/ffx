@@ -195,6 +195,15 @@ module FFX
       }.join
 
       <<~C
+        /*
+         * Storing the native function address directly would require a
+         * relocation in read-only section .text, forcing DT_TEXTREL and making the
+         * segment writable at load time. Instead we store an to a static variable;
+         * ZJIT resolves the offset to get
+         * the variable's address and dereferences it to obtain the function
+         * pointer. Using a variable also lets us to use a consistent
+         * underscore-prefixed name on all platforms
+         */
         __attribute__((used))
         static void *#{ptr_var} __asm__("_#{ptr_var}") = (void *)#{name};
 
@@ -207,7 +216,7 @@ module FFX
           ".long 0x46464930\\n"
           ".byte #{params.size}\\n"
         #{pbytes}  ".byte #{TYPES.fetch(ret)[:byte]}\\n"
-          ".long _#{ptr_var} - .\\n"
+          ".long _#{ptr_var} - .\\n"  /* PC-relative offset to ptr_var */
         );
         }
 
