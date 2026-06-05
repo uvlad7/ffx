@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require "ffi"
 
 #
 # FFX - Transpile Ruby FFI definitions into C extensions with ZJIT hints
@@ -96,7 +97,7 @@ typedef enum {
     string:     { byte: 20, c_type: "const char *",       to_c: "(NIL_P(%<arg>s) ? NULL : StringValueCStr(%<arg>s))", from_c: "(%<arg>s ? rb_str_new_cstr(%<arg>s) : Qnil)" },
     # Custom ffx-only types
     pointer_as_integer:     { byte:  25, c_type: "void *",       to_c: "(void *)NUM2ULL(%<arg>s)",    from_c: "ULL2NUM((unsigned long long)%<arg>s)" },
-    non_null_string:        { byte:  26, c_type: "const char *", to_c: "StringValueCStr(%s)",         from_c: "rb_str_new_cstr(%s)" },
+    non_null_string:        { byte:  26, c_type: "const char *", to_c: "StringValueCStr(%<arg>s)",    from_c: "rb_str_new_cstr(%<arg>s)" },
     # I'd also suggest something for NUM2CHR
   }
 
@@ -112,7 +113,9 @@ typedef enum {
     end
 
     def attach_function(name, params, ret)
-      FFX.module_data(self)[:functions] << { name: name, params: params.map { |p| FFI.find_type(p) }, ret: FFI.find_type(ret) }
+      params = params.map { |p| TYPES.key?(p) ? p : FFI.find_type(p).inspect[/FFI::Type::Builtin::(\S+)/, 1].downcase.to_sym }
+      ret = FFI.find_type(ret).inspect[/FFI::Type::Builtin::(\S+)/, 1].downcase.to_sym unless TYPES.key?(ret)
+      FFX.module_data(self)[:functions] << { name: name, params: params, ret: ret }
     end
   end
 
@@ -306,5 +309,6 @@ typedef enum {
 end
 
 module FFI
+  remove_const(:Library)
   Library = FFX::Library
 end

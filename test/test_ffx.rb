@@ -19,7 +19,7 @@ class TestFFX < Minitest::Test
           extend FFI::Library
           ffi_lib "c"
 
-          attach_function :strlen, [:string], :size_t
+          attach_function :strlen, [:non_null_string], :size_t
         end
       RUBY
 
