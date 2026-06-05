@@ -75,17 +75,17 @@ typedef enum {
 } NativeType;
 =end
   TYPES = {
-    # FFI uses 'unsigned int' for NATIVE_UINT32, for example, for some reason
-    # here I decided to use fixed-size types, but it needs to be validated
+    # FFI uses 'unsigned int' for NATIVE_UINT32, for example, (I guess) because they always match on platforms Ruby runs on
+    # I decided to do the same here
     void:       { byte:  0, c_type: "void" },
-    int8:       { byte:  1, c_type: "int8_t",             to_c: "(int8_t)NUM2INT(%<arg>s)",           from_c: "INT2NUM((signed char)%<arg>s)" },
-    uint8:      { byte:  2, c_type: "uint8_t",            to_c: "(uint8_t)NUM2UINT(%<arg>s)",         from_c: "UINT2NUM((unsigned char)%<arg>s)" },
-    int16:      { byte:  3, c_type: "int16_t",            to_c: "(int16_t)NUM2INT(%<arg>s)",          from_c: "INT2NUM((signed short)%<arg>s)" },
-    uint16:     { byte:  4, c_type: "uint16_t",           to_c: "(uint16_t)NUM2UINT(%<arg>s)",        from_c: "UINT2NUM((unsigned short)%<arg>s)" },
-    int32:      { byte:  5, c_type: "int32_t",            to_c: "(int32_t)NUM2INT(%<arg>s)",          from_c: "INT2NUM((signed int)%<arg>s)" },
-    uint32:     { byte:  6, c_type: "uint32_t",           to_c: "(uint32_t)NUM2UINT(%<arg>s)",        from_c: "UINT2NUM((unsigned int)%<arg>s)" },
-    int64:      { byte:  7, c_type: "int64_t",            to_c: "(int64_t)NUM2LL(%<arg>s)",           from_c: "LL2NUM((signed long long)%<arg>s)" },
-    uint64:     { byte:  8, c_type: "uint64_t",           to_c: "(uint64_t)NUM2ULL(%<arg>s)",         from_c: "ULL2NUM((unsigned long long)%<arg>s)" },
+    int8:       { byte:  1, c_type: "signed char",        to_c: "NUM2INT(%<arg>s)",                   from_c: "INT2NUM(%<arg>s)" },
+    uint8:      { byte:  2, c_type: "unsigned char",      to_c: "NUM2UINT(%<arg>s)",                  from_c: "UINT2NUM(%<arg>s)" },
+    int16:      { byte:  3, c_type: "signed short",       to_c: "NUM2INT(%<arg>s)",                   from_c: "INT2NUM(%<arg>s)" },
+    uint16:     { byte:  4, c_type: "unsigned short",     to_c: "NUM2UINT(%<arg>s)",                  from_c: "UINT2NUM(%<arg>s)" },
+    int32:      { byte:  5, c_type: "signed int",         to_c: "NUM2INT(%<arg>s)",                   from_c: "INT2NUM(%<arg>s)" },
+    uint32:     { byte:  6, c_type: "unsigned int",       to_c: "NUM2UINT(%<arg>s)",                  from_c: "UINT2NUM(%<arg>s)" },
+    int64:      { byte:  7, c_type: "signed long long",   to_c: "NUM2LL(%<arg>s)",                    from_c: "LL2NUM(%<arg>s)" },
+    uint64:     { byte:  8, c_type: "signed long long",   to_c: "NUM2ULL(%<arg>s)",                   from_c: "ULL2NUM(%<arg>s)" },
     long:       { byte:  9, c_type: "signed long",        to_c: "NUM2LONG(%<arg>s)",                  from_c: "LONG2NUM(%<arg>s)" },
     ulong:      { byte: 10, c_type: "unsigned long",      to_c: "NUM2ULONG(%<arg>s)",                 from_c: "ULONG2NUM(%<arg>s)" },
     float:      { byte: 11, c_type: "float",              to_c: "(float)NUM2DBL(%<arg>s)",            from_c: "DBL2NUM(%<arg>s)" },
@@ -95,8 +95,8 @@ typedef enum {
     bool:       { byte: 19, c_type: "bool",               to_c: "(RTEST(%<arg>s) ? true : false)",    from_c: "(%<arg>s ? Qtrue : Qfalse)" },
     string:     { byte: 20, c_type: "const char *",       to_c: "(NIL_P(%<arg>s) ? NULL : StringValueCStr(%<arg>s))", from_c: "(%<arg>s ? rb_str_new_cstr(%<arg>s) : Qnil)" },
     # Custom ffx-only types
-    pointer_as_integer:    { byte:  25, c_type: "void *", to_c: "(void *)NUM2ULL(%<arg>s)",           from_c: "ULL2NUM((unsigned long long)%<arg>s)" },
-    non_null_string:     { byte:  26, c_type: "const char *",       to_c: "StringValueCStr(%s)",           from_c: "rb_str_new_cstr(%s)" },
+    pointer_as_integer:     { byte:  25, c_type: "void *",       to_c: "(void *)NUM2ULL(%<arg>s)",    from_c: "ULL2NUM((unsigned long long)%<arg>s)" },
+    non_null_string:        { byte:  26, c_type: "const char *", to_c: "StringValueCStr(%s)",         from_c: "rb_str_new_cstr(%s)" },
     # I'd also suggest something for NUM2CHR
   }
 
