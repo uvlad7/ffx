@@ -96,10 +96,15 @@ typedef enum {
     bool:       { byte: 19, c_type: "bool",               to_c: "(RTEST(%<arg>s) ? true : false)",    from_c: "(%<arg>s ? Qtrue : Qfalse)" },
     string:     { byte: 20, c_type: "const char *",       to_c: "(NIL_P(%<arg>s) ? NULL : StringValueCStr(%<arg>s))", from_c: "(%<arg>s ? rb_str_new_cstr(%<arg>s) : Qnil)" },
     # Custom ffx-only types
-    pointer_as_integer:     { byte:  25, c_type: "void *",       to_c: "(void *)NUM2ULL(%<arg>s)",    from_c: "ULL2NUM((unsigned long long)%<arg>s)" },
-    non_null_string:        { byte:  26, c_type: "const char *", to_c: "StringValueCStr(%<arg>s)",    from_c: "rb_str_new_cstr(%<arg>s)" },
+    pointer_as_integer:     { byte:  25, c_type: "void *",       to_c: "(void *)NUM2ULL(%<arg>s)",    from_c: "ULL2NUM((unsigned long long)%<arg>s)", custom: true },
+    nonnull_string:        { byte:  26, c_type: "const char *", to_c: "StringValueCStr(%<arg>s)",    from_c: "rb_str_new_cstr(%<arg>s)",             custom: true },
     # I'd also suggest something for NUM2CHR
   }
+  FFI_TYPES = TYPES.filter_map do |name, info|
+    next if info[:custom]
+
+    [FFI.find_type(name), name]
+  end.to_h
 
   @modules = {}
 
@@ -113,8 +118,8 @@ typedef enum {
     end
 
     def attach_function(name, params, ret)
-      params = params.map { |p| TYPES.key?(p) ? p : FFI.find_type(p).inspect[/FFI::Type::Builtin::(\S+)/, 1].downcase.to_sym }
-      ret = FFI.find_type(ret).inspect[/FFI::Type::Builtin::(\S+)/, 1].downcase.to_sym unless TYPES.key?(ret)
+      params = params.map { |p| TYPES.key?(p) ? p : FFI_TYPES.fetch(FFI.find_type(p)) }
+      ret = FFI_TYPES.fetch(FFI.find_type(ret)) unless TYPES.key?(ret)
       FFX.module_data(self)[:functions] << { name: name, params: params, ret: ret }
     end
   end
