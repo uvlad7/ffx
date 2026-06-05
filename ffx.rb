@@ -9,32 +9,95 @@
 #   FFX.create_makefile("strlen", File.expand_path("strlen.rb", __dir__))
 #
 module FFX
+=begin
+FFI's builtin types are
+typedef enum {
+    # Supported
+    NATIVE_VOID,
+    # Supported
+    NATIVE_INT8,
+    # Supported
+    NATIVE_UINT8,
+    # Supported
+    NATIVE_INT16,
+    # Supported
+    NATIVE_UINT16,
+    # Supported
+    NATIVE_INT32,
+    # Supported
+    NATIVE_UINT32,
+    # Supported
+    NATIVE_INT64,
+    # Supported
+    NATIVE_UINT64,
+    # Supported
+    NATIVE_LONG,
+    # Supported
+    NATIVE_ULONG,
+    # Supported
+    NATIVE_FLOAT32,
+    # Supported
+    NATIVE_FLOAT64,
+    # Can be supported, requires more effort
+    NATIVE_LONGDOUBLE,
+    # Can't be supported without tight FFI integration, but a replacement address-as-integer exists
+    NATIVE_POINTER,
+    # Probably can be supported, but is very high effort
+    NATIVE_FUNCTION,
+    # Can't be supported without tight FFI integration
+    NATIVE_BUFFER_IN,
+    # Can't be supported without tight FFI integration
+    NATIVE_BUFFER_OUT,
+    # Can't be supported without tight FFI integration
+    NATIVE_BUFFER_INOUT,
+    # Supported
+    NATIVE_BOOL,
+
+    /** An immutable string.  Nul terminated, but only copies in to the native function */
+    # Supported
+    NATIVE_STRING,
+
+    /** The function takes a variable number of arguments */
+    # Can't be supported without the libffi
+    NATIVE_VARARGS,
+
+    /** Struct-by-value param or result */
+    # Probably can be supported, but is high effort
+    NATIVE_STRUCT,
+
+    /** An array type definition */
+    # Probably can be supported, but is high effort
+    NATIVE_ARRAY,
+
+    /** Custom native type */
+    # Probably can be supported, is converted from/to other native types
+    NATIVE_MAPPED,
+} NativeType;
+=end
   TYPES = {
+    # FFI uses 'unsigned int' for NATIVE_UINT32, for example, for some reason
+    # here I decided to use fixed-size types, but it needs to be validated
     void:       { byte:  0, c_type: "void" },
-    int:        { byte:  1, c_type: "int",                to_c: "NUM2INT(%s)",                   from_c: "INT2NUM(%s)" },
-    long:       { byte:  2, c_type: "long",               to_c: "NUM2LONG(%s)",                  from_c: "LONG2NUM(%s)" },
-    string:     { byte:  3, c_type: "const char *",       to_c: "StringValueCStr(%s)",           from_c: "rb_str_new_cstr(%s)" },
-    uint:       { byte:  4, c_type: "unsigned int",       to_c: "NUM2UINT(%s)",                  from_c: "UINT2NUM(%s)" },
-    size_t:     { byte:  5, c_type: "size_t",             to_c: "NUM2SIZET(%s)",                 from_c: "SIZET2NUM(%s)" },
-    double:     { byte:  6, c_type: "double",             to_c: "NUM2DBL(%s)",                   from_c: "DBL2NUM(%s)" },
-    float:      { byte:  7, c_type: "float",              to_c: "(float)NUM2DBL(%s)",            from_c: "DBL2NUM((double)%s)" },
-    pointer:    { byte:  8, c_type: "void *",             to_c: "(void *)NUM2ULL(%s)",           from_c: "ULL2NUM((unsigned long long)%s)" },
-    bool:       { byte:  9, c_type: "bool",               to_c: "(RTEST(%s) ? true : false)",    from_c: "((%s) ? Qtrue : Qfalse)" },
-    char:       { byte: 10, c_type: "char",               to_c: "(char)NUM2INT(%s)",             from_c: "INT2NUM((int)%s)" },
-    uchar:      { byte: 11, c_type: "unsigned char",      to_c: "(unsigned char)NUM2UINT(%s)",   from_c: "UINT2NUM((unsigned int)%s)" },
-    short:      { byte: 12, c_type: "short",              to_c: "(short)NUM2INT(%s)",            from_c: "INT2NUM((int)%s)" },
-    ushort:     { byte: 13, c_type: "unsigned short",     to_c: "(unsigned short)NUM2UINT(%s)",  from_c: "UINT2NUM((unsigned int)%s)" },
-    int8:       { byte: 14, c_type: "int8_t",             to_c: "(int8_t)NUM2INT(%s)",           from_c: "INT2NUM((int)%s)" },
-    uint8:      { byte: 15, c_type: "uint8_t",            to_c: "(uint8_t)NUM2UINT(%s)",         from_c: "UINT2NUM((unsigned int)%s)" },
-    int16:      { byte: 16, c_type: "int16_t",            to_c: "(int16_t)NUM2INT(%s)",          from_c: "INT2NUM((int)%s)" },
-    uint16:     { byte: 17, c_type: "uint16_t",           to_c: "(uint16_t)NUM2UINT(%s)",        from_c: "UINT2NUM((unsigned int)%s)" },
-    int32:      { byte: 18, c_type: "int32_t",            to_c: "(int32_t)NUM2INT(%s)",          from_c: "INT2NUM((int)%s)" },
-    uint32:     { byte: 19, c_type: "uint32_t",           to_c: "(uint32_t)NUM2UINT(%s)",        from_c: "UINT2NUM((unsigned int)%s)" },
-    int64:      { byte: 20, c_type: "int64_t",            to_c: "(int64_t)NUM2LL(%s)",           from_c: "LL2NUM((long long)%s)" },
-    uint64:     { byte: 21, c_type: "uint64_t",           to_c: "(uint64_t)NUM2ULL(%s)",         from_c: "ULL2NUM((unsigned long long)%s)" },
-    long_long:  { byte: 22, c_type: "long long",          to_c: "NUM2LL(%s)",                    from_c: "LL2NUM(%s)" },
-    ulong_long: { byte: 23, c_type: "unsigned long long", to_c: "NUM2ULL(%s)",                   from_c: "ULL2NUM(%s)" },
-    ulong:      { byte: 24, c_type: "unsigned long",      to_c: "NUM2ULONG(%s)",                 from_c: "ULONG2NUM(%s)" },
+    int8:       { byte:  1, c_type: "int8_t",             to_c: "(int8_t)NUM2INT(%<arg>s)",           from_c: "INT2NUM((signed char)%<arg>s)" },
+    uint8:      { byte:  2, c_type: "uint8_t",            to_c: "(uint8_t)NUM2UINT(%<arg>s)",         from_c: "UINT2NUM((unsigned char)%<arg>s)" },
+    int16:      { byte:  3, c_type: "int16_t",            to_c: "(int16_t)NUM2INT(%<arg>s)",          from_c: "INT2NUM((signed short)%<arg>s)" },
+    uint16:     { byte:  4, c_type: "uint16_t",           to_c: "(uint16_t)NUM2UINT(%<arg>s)",        from_c: "UINT2NUM((unsigned short)%<arg>s)" },
+    int32:      { byte:  5, c_type: "int32_t",            to_c: "(int32_t)NUM2INT(%<arg>s)",          from_c: "INT2NUM((signed int)%<arg>s)" },
+    uint32:     { byte:  6, c_type: "uint32_t",           to_c: "(uint32_t)NUM2UINT(%<arg>s)",        from_c: "UINT2NUM((unsigned int)%<arg>s)" },
+    int64:      { byte:  7, c_type: "int64_t",            to_c: "(int64_t)NUM2LL(%<arg>s)",           from_c: "LL2NUM((signed long long)%<arg>s)" },
+    uint64:     { byte:  8, c_type: "uint64_t",           to_c: "(uint64_t)NUM2ULL(%<arg>s)",         from_c: "ULL2NUM((unsigned long long)%<arg>s)" },
+    long:       { byte:  9, c_type: "signed long",        to_c: "NUM2LONG(%<arg>s)",                  from_c: "LONG2NUM(%<arg>s)" },
+    ulong:      { byte: 10, c_type: "unsigned long",      to_c: "NUM2ULONG(%<arg>s)",                 from_c: "ULONG2NUM(%<arg>s)" },
+    float:      { byte: 11, c_type: "float",              to_c: "(float)NUM2DBL(%<arg>s)",            from_c: "DBL2NUM(%<arg>s)" },
+    double:     { byte: 12, c_type: "double",             to_c: "NUM2DBL(%<arg>s)",                   from_c: "DBL2NUM(%<arg>s)" },
+    # reserved for long double
+    # FFI doesn't accept anything but true/false but I decided to lift this restriction
+    bool:       { byte: 19, c_type: "bool",               to_c: "(RTEST(%<arg>s) ? true : false)",    from_c: "(%<arg>s ? Qtrue : Qfalse)" },
+    string:     { byte: 20, c_type: "const char *",       to_c: "(NIL_P(%<arg>s) ? NULL : StringValueCStr(%<arg>s))", from_c: "(%<arg>s ? rb_str_new_cstr(%<arg>s) : Qnil)" },
+    # Custom ffx-only types
+    pointer_as_integer:    { byte:  25, c_type: "void *", to_c: "(void *)NUM2ULL(%<arg>s)",           from_c: "ULL2NUM((unsigned long long)%<arg>s)" },
+    non_null_string:     { byte:  26, c_type: "const char *",       to_c: "StringValueCStr(%s)",           from_c: "rb_str_new_cstr(%s)" },
+    # I'd also suggest something for NUM2CHR
   }
 
   @modules = {}
@@ -49,7 +112,7 @@ module FFX
     end
 
     def attach_function(name, params, ret)
-      FFX.module_data(self)[:functions] << { name: name, params: params, ret: ret }
+      FFX.module_data(self)[:functions] << { name: name, params: params.map { |p| FFI.find_type(p) }, ret: FFI.find_type(ret) }
     end
   end
 
@@ -161,14 +224,15 @@ module FFX
       impl = "rb_#{prefix}_#{name}_impl"
 
       args = f[:params].each_with_index.map { |t, i|
-        TYPES.fetch(t)[:to_c] % "arg#{i}"
+        format(TYPES.fetch(t)[:to_c], arg: "arg#{i}")
       }.join(", ")
       call = "#{name}(#{args})"
 
       body = if ret == :void
         "    #{call};\n    return Qnil;\n"
       else
-        "    return #{TYPES.fetch(ret)[:from_c] % call};\n"
+        ret_info = TYPES.fetch(ret)
+        "    #{ret_info[:c_type]} ffx_ret = #{call};\n    return #{format(ret_info[:from_c], arg: 'ffx_ret')};\n"
       end
 
       # Use asm label to force _ prefix on all platforms so the
