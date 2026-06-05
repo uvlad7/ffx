@@ -137,6 +137,7 @@ module FFX
       c << "#include <stdbool.h>\n"
       c << "#include <stdint.h>\n"
       c << "#include <math.h>\n"
+      c << "#include <stdio.h>\n"
       Array(@headers).each { |h| c << "#include <#{h}>\n" }
       c << "\n"
 
@@ -188,13 +189,27 @@ module FFX
       name = f[:name]
       params = f[:params]
       ret = f[:ret]
-      ptr_var = "rb_#{prefix}_#{name}_fptr"
+      wrapper = "rb_#{prefix}_#{name}_jit_wrapper"
+      ptr_var  = "rb_#{prefix}_#{name}_fptr"
+
+      c_ret    = TYPES.fetch(ret)[:c_type]
+      c_params = params.empty? ? "void" :
+        params.each_with_index.map { |t, i| "#{TYPES.fetch(t)[:c_type]} arg#{i}" }.join(", ")
+      c_args   = params.each_index.map { |i| "arg#{i}" }.join(", ")
+      wrapper_body = ret == :void ? "    #{name}(#{c_args});\n" :
+                                    "    return #{name}(#{c_args});\n"
 
       pbytes = params.map { |t|
         "  \".byte #{TYPES.fetch(t)[:byte]}\\n\"\n"
       }.join
 
       <<~C
+        static #{c_ret}
+        #{wrapper}(#{c_params})
+        {
+            fprintf(stderr, "[ZJIT] FfiCall: #{name}\\n");
+        #{wrapper_body}}
+
         /*
          * Storing the native function address directly would require a
          * relocation in read-only section .text, forcing DT_TEXTREL and making the
@@ -205,7 +220,7 @@ module FFX
          * underscore-prefixed name on all platforms
          */
         __attribute__((used))
-        static void *#{ptr_var} __asm__("_#{ptr_var}") = (void *)#{name};
+        static void *#{ptr_var} __asm__("_#{ptr_var}") = (void *)#{wrapper};
 
         __attribute__((naked, aligned(16)))
         static VALUE
